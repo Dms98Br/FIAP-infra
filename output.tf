@@ -9,3 +9,7 @@ output "web_server_endpoint" {
 output "db_endpoint" {
   value = aws_db_instance.videotraining.endpoint
 }
+
+output "react_endpoint" {
+  value = "http://${aws_s3_bucket.minha-react-fiap-poc.bucket}.s3-website-us-east-1.amazonaws.com"
+}

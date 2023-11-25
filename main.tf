@@ -1,8 +1,6 @@
 # Configure the AWS Provider
 provider "aws" {
   region = "us-east-1"
-  access_key = "AKIA4DEHYYMVW6W4AHPV"
-  secret_key = "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"
 }
 
 #repository for the back container
@@ -98,7 +96,7 @@ resource "aws_ecs_task_definition" "ecs_task" {
   }])
 }
 
-resource "aws_ecs_task_definition" "ecs_task" {
+resource "aws_ecs_task_definition" "ecs_task2" {
   family                   = "my-react-app"
   network_mode             = "awsvpc"
   execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
@@ -127,13 +125,39 @@ resource "aws_ecs_service" "ecs_service" {
     assign_public_ip = "true"                 // Set to "DISABLED" for internal networking only
   }
 }
- 
-resource "aws_s3_bucket" "react_app" {
-  bucket = "react-app"
-  acl    = "public-read"
-  
+
+resource "aws_s3_bucket" "minha-react-fiap-poc" {
+  bucket = "minha-react-fiap-poc"
+   force_destroy = true
   website {
     index_document = "index.html"
     error_document = "error.html"
   }
 }
+
+resource "aws_s3_bucket_ownership_controls" "minha-react-fiap-poc" {
+  bucket = aws_s3_bucket.minha-react-fiap-poc.id
+
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
+}
+
+resource "aws_iam_policy" "minha-react-fiap-poc_policy" {
+  name        = "minha-react-fiap-poc_policy"
+  description = "Policy to manage S3 bucket policies"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action = [
+          "s3:PutBucketPolicy"
+        ],
+        Effect   = "Allow",
+        Resource = "arn:aws:s3:::minha-react-fiap-poc",
+      },
+    ],
+  })
+}
+
