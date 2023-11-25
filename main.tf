@@ -7,7 +7,11 @@ provider "aws" {
 
 #repository for the back container
 resource "aws_ecr_repository" "spring_boot_app" {
-  name = "spring-boot-app"  # Name this appropriately
+  name = "spring-boot-app"  # Name this appropriately  
+}
+
+resource "aws_ecr_repository" "react_app" {
+  name = "react_app"  # Name this appropriately  
 }
 
 resource "aws_iam_role" "ecs_task_execution_role" {
@@ -49,6 +53,20 @@ resource "aws_iam_policy" "example_policy" {
 }
 EOF
 }
+
+#banco
+resource "aws_db_instance" "videotraining" {
+  allocated_storage    = 20
+  storage_type         = "gp2"
+  engine               = "mysql"
+  instance_class       = "db.t3.micro"
+  username             = "admin"
+  password             = "123Aa321"
+  parameter_group_name = "default.mysql8.0"
+  skip_final_snapshot  = true
+  publicly_accessible  = true  // Set to false in production for security reasons
+}
+
 # servidor_web
 resource "aws_instance" "web_server" {
   ami           = "ami-0230bd60aa48260c6"
@@ -80,6 +98,24 @@ resource "aws_ecs_task_definition" "ecs_task" {
   }])
 }
 
+resource "aws_ecs_task_definition" "ecs_task" {
+  family                   = "my-react-app"
+  network_mode             = "awsvpc"
+  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+  cpu                      = "256"
+  memory                   = "512"
+  requires_compatibilities = ["FARGATE"]
+
+  container_definitions = jsonencode([{
+    name  = "react-app",
+    image = "${aws_ecr_repository.react_app.repository_url}:latest",
+    portMappings = [{
+      containerPort = 8080,
+      hostPort      = 8080
+    }]
+  }])
+}
+
 resource "aws_ecs_service" "ecs_service" {
   name            = "my-spring-boot-service"
   cluster         = aws_ecs_cluster.ecs_cluster.id
@@ -91,16 +127,13 @@ resource "aws_ecs_service" "ecs_service" {
     assign_public_ip = "true"                 // Set to "DISABLED" for internal networking only
   }
 }
-
-#banco
-resource "aws_db_instance" "videotraining" {
-  allocated_storage    = 20
-  storage_type         = "gp2"
-  engine               = "mysql"
-  instance_class       = "db.t3.micro"
-  username             = "admin"
-  password             = "123Aa321"
-  parameter_group_name = "default.mysql8.0"
-  skip_final_snapshot  = true
-  publicly_accessible  = true  // Set to false in production for security reasons
+ 
+resource "aws_s3_bucket" "react_app" {
+  bucket = "react-app"
+  acl    = "public-read"
+  
+  website {
+    index_document = "index.html"
+    error_document = "error.html"
+  }
 }
